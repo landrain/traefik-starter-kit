@@ -1,0 +1,50 @@
+
+
+[http]
+  [http.routers]
+  #########################################################################
+    # http #
+    [http.routers.http-to-app]
+      # You can change the rules here and make it more complex. Check traefik
+      # docs!
+      rule = "Host(`jenkins.land.tech`)"
+      service = "app"
+      entryPoints = ["http"]
+      # enable if u want redirect to https 
+      middlewares = ["redirect"]
+
+  ## https #
+    [http.routers.https-to-app]
+      rule = "Host(`jenkins.land.tech`)"
+      service = "app"
+      entryPoints = ["https"]
+      middlewares = ["app-compress","app-ratelimit","app-latency"]
+      [http.routers.https-to-app.tls]
+
+    [http.services]
+    # service 
+      [http.services.app]
+        [http.services.app.loadBalancer]
+        passHostHeader = true
+          [[http.services.app.loadBalancer.servers]]
+            # This is where your dev app lives.
+            url = "http://10.130.135.196:8080/"
+
+
+########################################################################
+[http.middlewares]
+  [http.middlewares.redirect.redirectScheme]
+    scheme = "https"
+  [http.middlewares.app-compress.compress]
+  [http.middlewares.app-ratelimit.rateLimit]
+    average = 100
+    burst = 50
+  [http.middlewares.app-latency.circuitBreaker]
+    expression = "LatencyAtQuantileMS(50.0) > 100"
+
+[tls.stores]
+  [tls.stores.default]
+    [tls.stores.default.defaultCertificate]
+      certFile = "/data/land.crt"
+      keyFile  = "/data/land.key"
+
